@@ -229,10 +229,7 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ### 🔗 Enlaces Útiles
 
-- [Demo en vivo](https://tu-app-demo.streamlit.app/) _(próximamente)_
-- [Documentación técnica](./docs/TECHNICAL.md)
-- [Guía de usuario](./docs/USER_GUIDE.md)
-- [Changelog](./CHANGELOG.md)
+- [Demo en vivo](https://investment-project-evaluator.streamlit.app/)
 
 ---
 
