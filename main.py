@@ -50,12 +50,24 @@ st.markdown("""
 class FinancialAnalyzer:
     """Clase para análisis financiero de proyectos"""
     
-    @staticmethod
+  @staticmethod
     def calculate_npv(cash_flows, discount_rate):
-        """Calcula el Valor Actual Neto (VAN/NPV)"""
+        """
+        Calcula el Valor Actual Neto (VAN/NPV)
+        
+        Fórmula: VAN = Σ(CFt / (1+r)^t) donde:
+        - CFt = Flujo de caja en el período t
+        - r = tasa de descuento
+        - t = período (0, 1, 2, ...)
+        
+        Período 0: Inversión inicial (no se descuenta)
+        Período 1+: Flujos futuros (se descuentan)
+        """
         npv_value = 0
         for period, flow in enumerate(cash_flows):
-            npv_value += flow / (1 + discount_rate) ** period
+            discount_factor = (1 + discount_rate) ** period
+            present_value = flow / discount_factor
+            npv_value += present_value
         return npv_value
     
     @staticmethod
