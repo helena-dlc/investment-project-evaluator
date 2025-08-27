@@ -50,7 +50,7 @@ st.markdown("""
 class FinancialAnalyzer:
     """Clase para análisis financiero de proyectos"""
     
-  @staticmethod
+    @staticmethod
     def calculate_npv(cash_flows, discount_rate):
         """
         Calcula el Valor Actual Neto (VAN/NPV)
@@ -69,6 +69,29 @@ class FinancialAnalyzer:
             present_value = flow / discount_factor
             npv_value += present_value
         return npv_value
+    
+    @staticmethod
+    def calculate_npv_detailed(cash_flows, discount_rate):
+        """
+        Calcula el VAN con detalle paso a paso para verificación
+        """
+        detailed_calculation = []
+        npv_total = 0
+        
+        for period, flow in enumerate(cash_flows):
+            discount_factor = (1 + discount_rate) ** period
+            present_value = flow / discount_factor
+            npv_total += present_value
+            
+            detailed_calculation.append({
+                'periodo': period,
+                'flujo': flow,
+                'factor_descuento': discount_factor,
+                'valor_presente': present_value,
+                'npv_acumulado': npv_total
+            })
+        
+        return npv_total, detailed_calculation
     
     @staticmethod
     def calculate_irr(cash_flows, max_iterations=100):
@@ -398,21 +421,49 @@ def main():
                 
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Tabla de flujos descontados
+                # Tabla de flujos descontados con verificación
                 st.subheader("💰 Análisis Detallado de Flujos")
                 
-                periods = list(range(len(cash_flows)))
-                discount_factors = [1 / (1 + discount_rate) ** i for i in periods]
-                present_values = [cf * df for cf, df in zip(cash_flows, discount_factors)]
+                # Cálculo detallado para verificación
+                npv_detailed, calculation_steps = FinancialAnalyzer.calculate_npv_detailed(cash_flows, discount_rate)
                 
-                df_flows = pd.DataFrame({
-                    'Período': periods,
-                    'Flujo de Caja ($)': cash_flows,
-                    'Factor Descuento': discount_factors,
-                    'Valor Presente ($)': present_values
+                # Verificación de que ambos métodos dan el mismo resultado
+                if abs(npv_result - npv_detailed) > 0.01:
+                    st.warning(f"⚠️ Discrepancia detectada: VAN método 1: {npv_result:.2f}, VAN método 2: {npv_detailed:.2f}")
+                else:
+                    st.success(f"✅ Cálculo verificado: VAN = ${npv_detailed:,.2f}")
+                
+                # Crear tabla detallada
+                df_flows = pd.DataFrame(calculation_steps)
+                df_flows_display = pd.DataFrame({
+                    'Período': df_flows['periodo'],
+                    'Flujo de Caja ($)': [f"{flow:,.2f}" for flow in df_flows['flujo']],
+                    'Factor Descuento': [f"{factor:.6f}" for factor in df_flows['factor_descuento']],
+                    'Valor Presente ($)': [f"{pv:,.2f}" for pv in df_flows['valor_presente']],
+                    'VAN Acumulado ($)': [f"{acc:,.2f}" for acc in df_flows['npv_acumulado']]
                 })
                 
-                st.dataframe(df_flows, use_container_width=True)
+                st.dataframe(df_flows_display, use_container_width=True)
+                
+                # Mostrar fórmula utilizada
+                with st.expander("📐 Ver fórmula del VAN"):
+                    st.latex(r'''
+                    VAN = \sum_{t=0}^{n} \frac{CF_t}{(1+r)^t}
+                    ''')
+                    st.write("Donde:")
+                    st.write("- CFₜ = Flujo de caja en el período t")
+                    st.write("- r = Tasa de descuento")
+                    st.write("- t = Período (0, 1, 2, ...n)")
+                    
+                    # Ejemplo con los datos actuales
+                    formula_text = f"VAN = "
+                    for i, flow in enumerate(cash_flows):
+                        if i > 0:
+                            formula_text += " + "
+                        formula_text += f"{flow:,.0f}/(1+{discount_rate:.3f})^{i}"
+                    
+                    st.code(formula_text)
+                    st.write(f"VAN = ${npv_detailed:,.2f}")
     
     # Herramienta 3: Análisis de Momento Óptimo
     elif tool == "⏰ Análisis de Momento Óptimo":
@@ -533,7 +584,7 @@ def main():
         
         for i, tab in enumerate(project_tabs):
             with tab:
-                st.subheader(f"📁 Configuración Proyecto {i+1}")
+                st.subheader(f"🔧 Configuración Proyecto {i+1}")
                 
                 col_name, col_periods = st.columns(2)
                 with col_name:
@@ -742,7 +793,7 @@ def main():
     <div style='text-align: center; color: #666;'>
         <p><strong>📊 Analizador Económico de Proyectos</strong></p>
         <p>Herramienta profesional para análisis financiero y toma de decisiones de inversión</p>
-        <p><em>Versión 2.0 - Análisis financiero avanzado</em></p>
+        <p><em>Versión 2.0 - Desarrollado por Helena De La Cruz Vergara-Ingeniería Comercial Udec</em></p>
     </div>
     """, unsafe_allow_html=True)
 
