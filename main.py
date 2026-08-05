@@ -6,15 +6,11 @@ Aplicación Streamlit para análisis financiero de proyectos de inversión
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-from scipy.optimize import fsolve
-import warnings
-import io
 import base64
-warnings.filterwarnings('ignore')
+import finanzas
 
 # Configuración de la página
 st.set_page_config(
@@ -143,87 +139,37 @@ class FinancialAnalyzer:
     @staticmethod
     def calculate_npv(cash_flows, discount_rate):
         """Calcula el Valor Actual Neto (VAN/NPV)"""
-        npv_value = 0
-        for period, flow in enumerate(cash_flows):
-            discount_factor = (1 + discount_rate) ** period
-            present_value = flow / discount_factor
-            npv_value += present_value
-        return npv_value
+        return finanzas.van(cash_flows, discount_rate)
     
     @staticmethod
     def calculate_npv_detailed(cash_flows, discount_rate):
         """Calcula el VAN con detalle paso a paso"""
-        detailed_calculation = []
-        npv_total = 0
-        
-        for period, flow in enumerate(cash_flows):
-            discount_factor = (1 + discount_rate) ** period
-            present_value = flow / discount_factor
-            npv_total += present_value
-            
-            detailed_calculation.append({
-                'periodo': period,
-                'flujo': flow,
-                'factor_descuento': discount_factor,
-                'valor_presente': present_value,
-                'npv_acumulado': npv_total
-            })
-        
-        return npv_total, detailed_calculation
+        detalle = finanzas.van_detallado(cash_flows, discount_rate)
+        detalle_compatible = [
+            {**fila, "npv_acumulado": fila["van_acumulado"]}
+            for fila in detalle
+        ]
+        return detalle[-1]["van_acumulado"], detalle_compatible
     
     @staticmethod
     def calculate_irr(cash_flows, max_iterations=100):
         """Calcula la Tasa Interna de Retorno (TIR/IRR)"""
-        def npv_function(rate):
-            return FinancialAnalyzer.calculate_npv(cash_flows, rate)
-        
-        initial_guesses = [0.1, 0.2, 0.5, -0.1, -0.5, 1.0]
-        
-        for guess in initial_guesses:
-            try:
-                irr_value = fsolve(npv_function, guess, maxfev=max_iterations)[0]
-                if abs(npv_function(irr_value)) < 1e-6:
-                    return irr_value
-            except (RuntimeWarning, ValueError, OverflowError):
-                continue
-        
-        return None
+        return finanzas.tir(cash_flows)
     
     @staticmethod
     def calculate_payback(cash_flows):
         """Calcula el período de recuperación"""
-        cumulative_flow = 0
-        for period, flow in enumerate(cash_flows):
-            cumulative_flow += flow
-            if cumulative_flow >= 0:
-                return period
-        return None
+        return finanzas.payback(cash_flows)
     
     @staticmethod
     def calculate_discounted_payback(cash_flows, discount_rate):
         """Calcula el período de recuperación descontado"""
-        cumulative_pv = 0
-        for period, flow in enumerate(cash_flows):
-            pv = flow / (1 + discount_rate) ** period
-            cumulative_pv += pv
-            if cumulative_pv >= 0:
-                return period
-        return None
+        return finanzas.payback(cash_flows, discount_rate)
     
     @staticmethod
     def calculate_profitability_index(cash_flows, discount_rate):
         """Calcula el índice de rentabilidad"""
-        initial_investment = abs(cash_flows[0])
-        if initial_investment == 0:
-            return 0
-        
-        present_value_positive_flows = sum([
-            flow / (1 + discount_rate) ** period 
-            for period, flow in enumerate(cash_flows[1:], 1)
-            if flow > 0
-        ])
-        
-        return present_value_positive_flows / initial_investment
+        return finanzas.indice_rentabilidad(cash_flows, discount_rate)
     
     @staticmethod
     def calculate_caue(cash_flows, discount_rate):
@@ -231,20 +177,7 @@ class FinancialAnalyzer:
         Calcula el Costo Anual Uniforme Equivalente (CAUE)
         CAUE = VAN * [r(1+r)^n] / [(1+r)^n - 1]
         """
-        npv = FinancialAnalyzer.calculate_npv(cash_flows, discount_rate)
-        n = len(cash_flows) - 1  # Períodos (excluyendo período 0)
-        
-        if n <= 0 or discount_rate <= 0:
-            return 0
-        
-        # Factor de recuperación de capital
-        if discount_rate == 0:
-            crf = 1 / n
-        else:
-            crf = (discount_rate * (1 + discount_rate) ** n) / ((1 + discount_rate) ** n - 1)
-        
-        caue = npv * crf
-        return caue
+        return finanzas.vae(cash_flows, discount_rate)
     
     @staticmethod
     def sensitivity_analysis(cash_flows, base_discount_rate, sensitivity_range=0.1, points=21):
@@ -284,7 +217,7 @@ class FinancialAnalyzer:
             
             results['variations'].append(var * 100)
             results['npvs'].append(npv)
-            results['irrs'].append(irr * 100 if irr else 0)
+            results['irrs'].append(irr * 100 if irr is not None else 0)
         
         return results
     
@@ -427,14 +360,15 @@ def main():
         st.markdown("Selecciona la herramienta que necesitas:")
         
         tool = st.selectbox(
-            "",
+            "Herramienta de análisis",
             [
                 "🏦 Calculadora de Intereses",
                 "📈 Análisis VAN/TIR/CAUE", 
                 "🔍 Análisis de Sensibilidad",
                 "⏰ Análisis de Momento Óptimo",
                 "⚖️ Comparación de Proyectos"
-            ]
+            ],
+            label_visibility="collapsed",
         )
         
         st.markdown("---")
@@ -557,12 +491,13 @@ def main():
         with col2:
             if st.button("🔬 Realizar Análisis Completo", key="calc_indicators"):
                 # Cálculos principales
-                npv_result = FinancialAnalyzer.calculate_npv(cash_flows, discount_rate)
-                irr_result = FinancialAnalyzer.calculate_irr(cash_flows)
-                payback_result = FinancialAnalyzer.calculate_payback(cash_flows)
-                discounted_payback_result = FinancialAnalyzer.calculate_discounted_payback(cash_flows, discount_rate)
-                pi_result = FinancialAnalyzer.calculate_profitability_index(cash_flows, discount_rate)
-                caue_result = FinancialAnalyzer.calculate_caue(cash_flows, discount_rate)
+                evaluacion = finanzas.evaluar(cash_flows, discount_rate)
+                npv_result = evaluacion.van
+                irr_result = evaluacion.tir
+                payback_result = evaluacion.payback
+                discounted_payback_result = evaluacion.payback_descontado
+                pi_result = evaluacion.indice_rentabilidad
+                caue_result = evaluacion.vae
                 
                 # Resultados principales
                 st.subheader("📊 Indicadores Financieros")
@@ -586,13 +521,13 @@ def main():
                 
                 with col_res4:
                     if payback_result is not None:
-                        st.metric("Payback Simple", f"{payback_result} períodos")
+                        st.metric("Payback Simple", f"{payback_result:.2f} períodos")
                     else:
                         st.metric("Payback Simple", "No recupera")
                 
                 with col_res5:
                     if discounted_payback_result is not None:
-                        st.metric("Payback Descontado", f"{discounted_payback_result} períodos")
+                        st.metric("Payback Descontado", f"{discounted_payback_result:.2f} períodos")
                     else:
                         st.metric("Payback Descontado", "No recupera")
                 
@@ -601,6 +536,9 @@ def main():
                 with col_pi1:
                     delta_pi = "Rentable ✅" if pi_result > 1 else "No rentable ❌"
                     st.metric("Índice de Rentabilidad", f"{pi_result:.3f}", delta=delta_pi)
+
+                for advertencia in evaluacion.advertencias:
+                    st.warning(advertencia)
                 
                 # Perfil VAN-TIR
                 st.subheader("📈 Perfil del Proyecto")
@@ -1126,13 +1064,13 @@ def main():
                     'Proyecto': project['name'],
                     'Tipo': 'Repetible' if project['repeatable'] else 'Único',
                     'VAN ($)': f"{npv_proj:,.0f}",
-                    'TIR (%)': f"{irr_proj*100:.2f}" if irr_proj else "N/A",
+                    'TIR (%)': f"{irr_proj*100:.2f}" if irr_proj is not None else "N/A",
                     'CAUE ($)': f"{caue_proj:,.0f}",
-                    'Payback Simple': f"{payback_proj}" if payback_proj else "No recupera",
-                    'Payback Descontado': f"{discounted_payback_proj}" if discounted_payback_proj else "No recupera",
+                    'Payback Simple': f"{payback_proj:.2f}" if payback_proj is not None else "No recupera",
+                    'Payback Descontado': f"{discounted_payback_proj:.2f}" if discounted_payback_proj is not None else "No recupera",
                     'Índice Rentabilidad': f"{pi_proj:.3f}",
                     'npv_numeric': npv_proj,
-                    'irr_numeric': irr_proj if irr_proj else 0,
+                    'irr_numeric': irr_proj if irr_proj is not None else 0,
                     'caue_numeric': caue_proj,
                     'pi_numeric': pi_proj,
                     'repeatable': project['repeatable']

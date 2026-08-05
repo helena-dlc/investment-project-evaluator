@@ -34,20 +34,18 @@ Una aplicación web profesional desarrollada con Streamlit para el análisis fin
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **Python 3.8+**
+- **Python 3.10+**
 - **Streamlit**: Framework para aplicaciones web
 - **NumPy**: Cálculos numéricos avanzados
 - **Pandas**: Manipulación de datos
 - **Plotly**: Visualizaciones interactivas
-- **Matplotlib**: Gráficos estáticos
-- **SciPy**: Optimización matemática
 
 ## 📦 Instalación
 
 ### Prerrequisitos
 
 ```bash
-Python 3.8 o superior
+Python 3.10 o superior
 pip (gestor de paquetes de Python)
 ```
 
@@ -75,13 +73,13 @@ source venv/bin/activate
 3. **Instalar dependencias**:
 
 ```bash
-pip install streamlit numpy pandas matplotlib plotly scipy
+pip install -r requirements.txt
 ```
 
 ### Instalación Rápida
 
 ```bash
-pip install streamlit numpy pandas matplotlib plotly scipy
+pip install -r requirements.txt
 ```
 
 ## 🚀 Uso de la Aplicación
@@ -157,26 +155,36 @@ Tasa de descuento: 10%
 analizador-economico-proyectos/
 │
 ├── main.py                 # Aplicación principal
-├── README.md              # Documentación
-├── requirements.txt       # Dependencias
-└── assets/               # Recursos adicionales
-    ├── screenshots/      # Capturas de pantalla
-    └── examples/         # Ejemplos de uso
+├── finanzas.py             # Motor financiero independiente de la UI
+├── tests/
+│   └── test_finanzas.py    # Pruebas automáticas de las fórmulas
+├── readme.md               # Documentación
+├── requirements.txt        # Dependencias
+└── assets/                 # Capturas de pantalla
 ```
+
+### Ejecutar las pruebas
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+La propuesta para separar la futura interfaz React del motor Python está en
+[docs/migracion-interfaz.md](docs/migracion-interfaz.md).
 
 ## 📸 Capturas de Pantalla
 
 ### Dashboard Principal
 
-![Dashboard](assets/screenshots/dashboard.png)
+![Dashboard](assets/screetshots/dashboard.png)
 
 ### Análisis VAN/TIR
 
-![VAN-TIR Analysis](assets/screenshots/vantir.png)
+![VAN-TIR Analysis](assets/screetshots/vantir.png)
 
 ### Comparación de Proyectos
 
-![Project Comparison](assets/screenshots/comparison.png)
+![Project Comparison](assets/screetshots/comparison.png)
 
 ## 📝 Lista de Tareas Futuras
 
@@ -215,7 +223,6 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 - **Streamlit** por el excelente framework
 - **Plotly** por las visualizaciones interactivas
-- **SciPy** por los algoritmos de optimización
 - Comunidad de Python por el ecosistema financiero
 
 ## 📚 Referencias
@@ -223,7 +230,6 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 - Ross, S. A., Westerfield, R. W., & Jaffe, J. (2019). _Corporate Finance_
 - Brealey, R. A., Myers, S. C., & Allen, F. (2020). _Principles of Corporate Finance_
 - [Documentación de Streamlit](https://docs.streamlit.io/)
-- [SciPy Optimization](https://docs.scipy.org/doc/scipy/reference/optimize.html)
 
 ---
 
